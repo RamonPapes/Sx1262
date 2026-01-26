@@ -919,7 +919,7 @@ sx1262_status_t sx1262_handle_rx_done(sx1262_t *dev, uint8_t *buf, uint8_t *len)
 
 }
 
-sx1262_status_t sx1262_receive_single_packet(sx1262_t *dev, uint8_t *buf,
+sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf,
 		uint8_t *len, uint32_t timeout) {
 	sx1262_status_t ret;
 
