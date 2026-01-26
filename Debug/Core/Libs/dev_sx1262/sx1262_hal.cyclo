@@ -1,0 +1,8 @@
+../Core/Libs/dev_sx1262/sx1262_hal.c:4:6:sx1262_hal_spi_cs_low	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:8:6:sx1262_hal_spi_cs_high	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:12:9:sx1262_hal_gpio_read_busy	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:16:6:sx1262_hal_gpio_write_reset	2
+../Core/Libs/dev_sx1262/sx1262_hal.c:24:6:sx1262_hal_spi_transmit_receive	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:28:6:sx1262_hal_delay_ms	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:32:10:sx1262_hal_get_tick	1
+../Core/Libs/dev_sx1262/sx1262_hal.c:36:6:rx_callback	1
