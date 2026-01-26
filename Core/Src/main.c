@@ -66,6 +66,8 @@ static void config_lora(sx1262_t *dev);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+sx1262_t sx1262_dev;
+sx1262_hal_t sx1262_hal;
 //extern SX1262 SX_stc;
 void sx1262_receive_callback(uint8_t *payload, uint8_t payload_len) {
 	asm volatile("nop");
@@ -115,8 +117,8 @@ int main(void) {
 	MX_USB_DEVICE_Init();
 	/* USER CODE BEGIN 2 */
 
-	sx1262_t sx1262_dev;
-	sx1262_hal_t sx1262_hal;
+
+
 
 	sx1262_hal.spi_transmit_receive = sx1262_hal_spi_transmit_receive;
 	sx1262_hal.spi_cs_low = sx1262_hal_spi_cs_low;
@@ -138,12 +140,11 @@ int main(void) {
 
 	config_lora(&sx1262_dev);
 
-	err = sx1262_lora_transmit_it(&sx1262_dev, (uint8_t *) "send_test", 10);
+//	err = sx1262_lora_transmit_it(&sx1262_dev, (uint8_t *) "send_test", 10);
 
-//	uint8_t buf[256];
-//	uint8_t len = 0;
-//	uint32_t timeout = 10000; // 10 seconds timeout
-//	err = sx1262_receive_single_packet(&sx1262_dev, buf, len, timeout);
+	uint8_t buf[256];
+	uint8_t len = 0;
+	uint32_t timeout = 10000; // 10 seconds timeout
 
 
 
@@ -162,16 +163,12 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1) {
-		if (Rec_int_flg) {
-			Rec_int_flg = 0;
-			sx1262_irq_handler(&sx1262_dev);
-		}
-
 //			SX1262_HandleCallback(recbuf, &Len);
 //			SX1262_setModeReceive();
 
-		sx1262_lora_transmit(&sx1262_dev, (uint8_t *)"send_test", 10, 1000);
-		HAL_Delay(3000);
+//		err = sx1262_lora_receive(&sx1262_dev, buf, &len, timeout);
+		err = sx1262_lora_transmit(&sx1262_dev, (uint8_t *)"send_test", 10, 1000);
+		HAL_Delay(1000);
 
 		/* USER CODE END WHILE */
 
@@ -437,7 +434,7 @@ static void config_lora(sx1262_t *dev) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == LORA_1262_DIO1_Pin) {
-		Rec_int_flg = 1;
+//		sx1262_irq_handler(&sx1262_dev);
 	}
 }
 
