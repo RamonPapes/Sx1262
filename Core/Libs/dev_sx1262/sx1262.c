@@ -8,6 +8,43 @@
 #include "sx1262.h"
 #include "string.h"
 
+/* PRIVATE FUNCTIONS PROTOTYPES */
+
+static void sx1262_get_image_calib_params(uint32_t freq_hz, uint8_t *freq1,
+		uint8_t *freq2);
+
+/* PRIVATE FUNCTIONS DEFINITIONS */
+static void sx1262_get_image_calib_params(uint32_t freq_hz, uint8_t *freq1,
+		uint8_t *freq2) {
+	// Calculate frequency parameters based on the input frequency
+
+	if (freq_hz >= 430000000 && freq_hz <= 440000000) {
+		*freq1 = 0x6B;
+		*freq2 = 0x6F;
+	}
+	else if (freq_hz >= 470000000 && freq_hz <= 510000000) {
+		*freq1 = 0x75;
+		*freq2 = 0x81;
+	}
+	else if (freq_hz >= 779000000 && freq_hz <= 787000000) {
+		*freq1 = 0xC1;
+		*freq2 = 0xC5;
+	}
+	else if (freq_hz >= 863000000 && freq_hz <= 870000000) {
+		*freq1 = 0xD7;
+		*freq2 = 0xDB;
+	}
+	else if (freq_hz >= 902000000 && freq_hz <= 928000000) {
+		*freq1 = 0xE1;
+		*freq2 = 0xE9;
+	}
+	else {
+		/* Fallback seguro */
+		*freq1 = 0xE1;
+		*freq2 = 0xE9;
+	}
+}
+
 /**
  * @brief Set CS pin low
  * @param[in] dev Pointer to device handle
@@ -682,6 +719,27 @@ sx1262_status_t sx1262_set_pa_config(sx1262_t *dev, uint8_t duty_cycle,
 
 }
 
+sx1262_status_t sx1262_calibrate_image(sx1262_t *dev, uint32_t freq_hz) {
+	if(dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+	uint8_t freq1, freq2;
+
+	sx1262_get_image_calib_params(freq_hz, &freq1, &freq2);
+
+	uint8_t cmd_buf[3];
+	uint8_t res_buf[3];
+
+	cmd_buf[0] = SX126X_CMD_CALIBRATE_IMAGE; // Opcode for CalibrateImage
+	cmd_buf[1] = freq1; // Frequency parameter 1
+	cmd_buf[2] = freq2; // Frequency parameter 2
+
+	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 3, 100, 0);
+
+	return ret;
+
+}
+
 sx1262_status_t sx1262_set_tx_params(sx1262_t *dev, int8_t power,
 		sx1262_ramp_time_t rampTime) {
 	uint8_t cmd_buf[3];
@@ -839,10 +897,14 @@ sx1262_status_t sx1262_get_packet_status(sx1262_t *dev, uint8_t *status,
 		return ret;
 	}
 
-	if(status != NULL) *status = res_buf[0];
-	if(rssi != NULL)   *rssi = res_buf[1];
-	if(snr != NULL)    *snr = res_buf[2];
-	if(signal_rssi != NULL) *signal_rssi = res_buf[3];
+	if (status != NULL)
+		*status = res_buf[0];
+	if (rssi != NULL)
+		*rssi = res_buf[1];
+	if (snr != NULL)
+		*snr = res_buf[2];
+	if (signal_rssi != NULL)
+		*signal_rssi = res_buf[3];
 
 	return SX1262_OK;
 }
@@ -919,8 +981,8 @@ sx1262_status_t sx1262_handle_rx_done(sx1262_t *dev, uint8_t *buf, uint8_t *len)
 
 }
 
-sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf,
-		uint8_t *len, uint32_t timeout) {
+sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len,
+		uint32_t timeout) {
 	sx1262_status_t ret;
 
 	ret = sx1262_set_mode_continuous_receive(dev);
@@ -960,7 +1022,8 @@ sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf,
 
 		dev->hal.delay_ms(10);
 
-		ret = SX1262_set_fallback_mode(dev, SX1262_RX_TX_FALLBACK_MODE_STDBY_XOSC);
+		ret = SX1262_set_fallback_mode(dev,
+				SX1262_RX_TX_FALLBACK_MODE_STDBY_XOSC);
 
 		if (ret != SX1262_OK) {
 			return ret;
@@ -969,6 +1032,41 @@ sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf,
 	}
 
 	return SX1262_OK;
+}
+
+/**
+ * @brief Set the LoRa sync word
+ * @param[in] dev Pointer to device handle
+ * @param[in] sync_word Sync word to set
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_lora_sync_word(sx1262_t *dev, uint16_t sync_word) {
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	uint8_t cmd_buf[4];
+	uint8_t res_buf[4];
+
+	cmd_buf[0] = SX126X_CMD_WRITE_REGISTER;
+	cmd_buf[1] = 0x06;
+	cmd_buf[2] = 0xC0;
+	cmd_buf[3] = (sync_word >> 8) & 0xFF;
+
+	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 4, 100, 0);
+
+	if (ret != SX1262_OK) {
+		return ret;
+	}
+
+	cmd_buf[0] = SX126X_CMD_WRITE_REGISTER;
+	cmd_buf[1] = 0x06;
+	cmd_buf[2] = 0xC1;
+	cmd_buf[3] = sync_word & 0xFF;
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, 4, 100, 0);
+
+	return ret;
 }
 
 /**

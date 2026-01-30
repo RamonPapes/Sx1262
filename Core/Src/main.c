@@ -148,7 +148,7 @@ int main(void) {
 
 
 
-//	err = sx1262_set_mode_continuous_receive(&sx1262_dev);
+	err = sx1262_set_mode_continuous_receive(&sx1262_dev);
 //
 	if (err != SX1262_OK) {
 		// Handle initialization error
@@ -167,8 +167,8 @@ int main(void) {
 //			SX1262_setModeReceive();
 
 //		err = sx1262_lora_receive(&sx1262_dev, buf, &len, timeout);
-		err = sx1262_lora_transmit(&sx1262_dev, (uint8_t *)"send_test", 10, 1000);
-		HAL_Delay(1000);
+//		err = sx1262_lora_transmit(&sx1262_dev, (uint8_t *)"send_test", 10, 1000);
+//		HAL_Delay(1000);
 
 		/* USER CODE END WHILE */
 
@@ -434,7 +434,7 @@ static void config_lora(sx1262_t *dev) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == LORA_1262_DIO1_Pin) {
-//		sx1262_irq_handler(&sx1262_dev);
+		sx1262_irq_handler(&sx1262_dev);
 	}
 }
 

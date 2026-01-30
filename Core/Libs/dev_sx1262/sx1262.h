@@ -126,6 +126,7 @@ sx1262_status_t sx1262_get_chip_status(sx1262_t *dev, chip_mode_t *mode,
  */
 sx1262_status_t sx1262_set_packet_type(sx1262_t *dev, packet_type_t pkt_type);
 
+//TODO: TESTING
 /**
  * @brief Get packet type
  * @param[in] dev Pointer to device handle
@@ -138,9 +139,9 @@ sx1262_status_t sx1262_get_packet_type(sx1262_t *dev, packet_type_t *pkt_type);
  * @brief Set RF frequency
  * @param[in] dev Device handle
  * @param[in] frequency_hz Frequency in Hz
+ *
  */
 sx1262_status_t sx1262_set_frequency(sx1262_t *dev, uint32_t frequency);
-
 /**
  * @brief Set LoRa modulation parameters
  * @param[in] dev Device handle
@@ -212,6 +213,18 @@ sx1262_status_t sx1262_set_stop_timer_on_sync_word(sx1262_t *dev);
  */
 sx1262_status_t sx1262_set_pa_config(sx1262_t *dev, uint8_t duty_cycle,
 		uint8_t hp_max, uint8_t device_select, uint8_t paLut);
+
+//sx1262_status_t sx1262_calibrate(sx1262_t *dev, sx1262_calibration_param_t param);
+
+/**
+ * @brief Calibrate image
+ * @param[in] dev Device handle
+ * @param[in] freq1 Frequency 1
+ * @param[in] freq2 Frequency 2
+ * @return SX1262_OK on success | error code
+ * @note This function performs image calibration for the given frequencies.
+ */
+sx1262_status_t sx1262_calibrate_image(sx1262_t *dev, uint32_t freq_hz);;
 
 /**
  * @brief Set TX parameters
@@ -290,6 +303,7 @@ sx1262_status_t sx1262_handle_rx_done(sx1262_t *dev, uint8_t *buf, uint8_t *len)
  */
 sx1262_status_t sx1262_handle_tx_done(sx1262_t *dev, sx1262_status_t status);
 
+//TODO: TESTING
 /**
  * @brief Transmit data
  * @param[in] dev Device handle
@@ -299,6 +313,7 @@ sx1262_status_t sx1262_handle_tx_done(sx1262_t *dev, sx1262_status_t status);
  */
 sx1262_status_t sx1262_lora_transmit(sx1262_t *dev, uint8_t *data, uint8_t length, uint32_t timeout_ms);
 
+//TODO: TESTING
 /**
  * @brief Transmit data in interrupt mode
  * @param[in] dev Device handle
