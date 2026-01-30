@@ -302,10 +302,14 @@ sx1262_status_t sx1262_read_buffer(sx1262_t *dev, uint8_t offset, uint8_t *data,
 //TODO: TESTING
 sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi);
 
+/**
+ * @brief Set device to TX mode
+ * @param[in] dev Device handle
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_tx(sx1262_t *dev);
 
-sx1262_status_t sx1262_set_tx();
-
-sx1262_status_t sx1262_set_rx();
+sx1262_status_t sx1262_set_rx(sx1262_t *dev, uint32_t timeout);
 
 ;
 

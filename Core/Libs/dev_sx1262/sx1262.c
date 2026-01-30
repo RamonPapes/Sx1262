@@ -1156,6 +1156,37 @@ sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi){
 }
 
 /**
+ * @brief Set device to transmit mode
+ * @param[in] dev Pointer to device handle
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_tx(sx1262_t *dev){
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	sx1262_status_t ret;
+
+	uint8_t cmd_buf[4] = { 0 };
+	uint8_t res_buf[4] = { 0 };
+
+	cmd_buf[0] = SX126X_CMD_SET_TX;
+	cmd_buf[1] = 0xFF; // Dummy byte
+	cmd_buf[2] = 0xFF;
+	cmd_buf[3] = 0xFF;
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, 4, 100, 0);
+
+	if (ret != SX1262_OK) {
+		return ret;
+	}
+
+	dev->mode = CHIP_MODE_TX;
+
+	return SX1262_OK;
+}
+
+/**
  * @brief Set the LoRa sync word
  * @param[in] dev Pointer to device handle
  * @param[in] sync_word Sync word to set
