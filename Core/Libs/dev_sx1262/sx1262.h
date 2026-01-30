@@ -23,60 +23,12 @@ extern "C" {
  */
 
 /**
- * @brief Set CS pin low
- * @param[in] dev Pointer to device handle
- * @return SX1262_OK on success | error code
- */
-sx1262_status_t sx1262_cs_low(const sx1262_t *dev);
-
-/**
- * @brief Set CS pin high
- * @param[in] dev Pointer to device handle
- * @return SX1262_OK on success | error code
- */
-sx1262_status_t sx1262_cs_high(const sx1262_t *dev);
-
-/**
- * @brief Wait until device is not busy or timeout occurs
- * @param[in] dev Pointer to device handle
- * @param[in] timeout Timeout in milliseconds
- * @return SX1262_OK if device is ready | SX1262_TIMEOUT if timeout occurs | error code
- */
-sx1262_status_t sx1262_busy_wait(const sx1262_t *dev, uint32_t timeout);
-
-/**
- * @brief Check if device is busy
- * @param[in] dev Pointer to device handle
- * @return 1 if busy, 0 if not busy | error code
- */
-uint8_t sx1262_is_busy(const sx1262_t *dev);
-
-/**
- * @brief Send SPI command to device
- * @param[in] dev Pointer to device handle
- * @param[in] tx_data Data to transmit
- * @param[out] rx_data Buffer for received data
- * @param[in] tx_len Length of data to transmit
- * @param[in] rx_len Expected response length
- * @param[in] timeout_ms Timeout in milliseconds
- */
-sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd, uint8_t *res,
-		uint16_t len, uint32_t timeout, uint16_t delay);
-
-/**
  * @brief sx1262 init function
  * @param[in] dev pointer to an sx1262 handle structure
  * @param[in] hal pointer to an sx1262 hal structure
  * @note    none
  */
 sx1262_status_t sx1262_init(sx1262_t *dev, const sx1262_hal_t *hal);
-
-/**
- * @brief Check if device is the correct SX1262
- * @param[in] dev Pointer to device handle
- * @return 1 if correct device, 0 if not
- */
-uint8_t sx1262_check_correct(sx1262_t *dev);
 
 
 /**
@@ -102,11 +54,20 @@ sx1262_status_t sx1262_set_mode_standby(sx1262_t *dev);
 sx1262_status_t sx1262_set_mode_continuous_receive(sx1262_t *dev);
 
 /**
- * @brief Check device communication
+ * @brief Set sync word
  * @param[in] dev Pointer to device handle
- * @return SX1262_OK if device responds correctly
+ * @param[in] sync_word Sync word to set
+ * @return SX1262_OK on success | error code
  */
-sx1262_status_t sx1262_check_communication(sx1262_t *dev);
+sx1262_status_t sx1262_get_lora_sync_word(sx1262_t *dev, uint16_t *sync_word);
+
+/**
+ * @brief Set LoRa sync word
+ * @param[in] dev Device handle
+ * @param[in] sync_word 16-bit sync word
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_lora_sync_word(sx1262_t *dev, uint16_t sync_word);
 
 /**
  * @brief Get chip status
@@ -331,14 +292,6 @@ sx1262_status_t sx1262_lora_transmit_it(sx1262_t *dev, uint8_t *data, uint8_t le
  * @return SX1262_OK on success
  */
 sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len, uint32_t timeout);
-
-/**
- * @brief Set LoRa sync word
- * @param[in] dev Device handle
- * @param[in] sync_word 16-bit sync word
- * @return SX1262_OK on success | error code
- */
-sx1262_status_t sx1262_set_lora_sync_word(sx1262_t *dev, uint16_t sync_word);
 
 /**
  * @brief Set TX done callback function
