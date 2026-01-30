@@ -51,10 +51,14 @@ static uint8_t sx1262_is_busy(const sx1262_t *dev);
  * @param[in] rx_len Expected response length
  * @param[in] timeout_ms Timeout in milliseconds
  */
-static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd, uint8_t *res,
-		uint16_t len, uint32_t timeout, uint16_t delay);
+static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd,
+		uint8_t *res, uint16_t len, uint32_t timeout, uint16_t delay);
 
+static sx1262_status_t sx1262_write_register(sx1262_t *dev, uint16_t addr,
+		const uint8_t *data, uint8_t len);
 
+static sx1262_status_t sx1262_read_register(sx1262_t *dev, uint16_t addr,
+		uint8_t *data, uint8_t len);
 
 /* ===== Private function definitions ================================ */
 static void sx1262_get_image_calib_params(uint32_t freq_hz, uint8_t *freq1,
@@ -64,25 +68,19 @@ static void sx1262_get_image_calib_params(uint32_t freq_hz, uint8_t *freq1,
 	if (freq_hz >= 430000000 && freq_hz <= 440000000) {
 		*freq1 = 0x6B;
 		*freq2 = 0x6F;
-	}
-	else if (freq_hz >= 470000000 && freq_hz <= 510000000) {
+	} else if (freq_hz >= 470000000 && freq_hz <= 510000000) {
 		*freq1 = 0x75;
 		*freq2 = 0x81;
-	}
-	else if (freq_hz >= 779000000 && freq_hz <= 787000000) {
+	} else if (freq_hz >= 779000000 && freq_hz <= 787000000) {
 		*freq1 = 0xC1;
 		*freq2 = 0xC5;
-	}
-	else if (freq_hz >= 863000000 && freq_hz <= 870000000) {
+	} else if (freq_hz >= 863000000 && freq_hz <= 870000000) {
 		*freq1 = 0xD7;
 		*freq2 = 0xDB;
-	}
-	else if (freq_hz >= 902000000 && freq_hz <= 928000000) {
+	} else if (freq_hz >= 902000000 && freq_hz <= 928000000) {
 		*freq1 = 0xE1;
 		*freq2 = 0xE9;
-	}
-	else {
-		/* Fallback seguro */
+	} else {
 		*freq1 = 0xE1;
 		*freq2 = 0xE9;
 	}
@@ -160,8 +158,8 @@ static uint8_t sx1262_is_busy(const sx1262_t *dev) {
  * @param[in] delay Delay after command execution in milliseconds
  * @return SX1262_OK on success | error code
  */
-static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd, uint8_t *res,
-		uint16_t len, uint32_t timeout, uint16_t delay) {
+static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd,
+		uint8_t *res, uint16_t len, uint32_t timeout, uint16_t delay) {
 	if (dev->hal.spi_transmit_receive == NULL) {
 		return SX1262_ERR_NOT_INITIALIZED;
 	}
@@ -195,6 +193,77 @@ static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd, uint8_t 
 	return SX1262_OK;
 }
 
+/**
+ * @brief Write to device register
+ * @param[in] dev Pointer to device handle
+ * @param[in] addr Register address
+ * @param[in] data Data buffer to write
+ * @param[in] len Length of data to write
+ * @return SX1262_OK on success | error code
+ */
+
+static sx1262_status_t sx1262_write_register(sx1262_t *dev, uint16_t addr,
+		const uint8_t *data, uint8_t len) {
+	if (!dev || !data || len == 0) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	uint8_t cmd_buf[3 + len];
+	uint8_t res_buf[3 + len];
+
+	cmd_buf[0] = SX126X_CMD_WRITE_REGISTER;
+	cmd_buf[1] = (addr >> 8) & 0xFF; // MSB of register address
+	cmd_buf[2] = addr & 0xFF; // LSB of register address
+
+	memcpy(&cmd_buf[3], data, len);
+
+	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 3 + len,
+			100, 0);
+
+	return ret;
+}
+
+/**
+ * @brief Read from device register
+ * @param[in] dev Pointer to device handle
+ * @param[in] addr Register address
+ * @param[out] data Data buffer to read into
+ * @param[in] len Length of data to read
+ * @return SX1262_OK on success | error code
+ */
+static sx1262_status_t sx1262_read_register(sx1262_t *dev, uint16_t addr,
+		uint8_t *data, uint8_t len) {
+	if (!dev || !data || len == 0) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	uint8_t cmd_buf[4] = { 0 };
+	uint8_t res_buf[4 + len];
+
+	cmd_buf[0] = SX126X_CMD_READ_REGISTER;
+	cmd_buf[1] = (addr >> 8) & 0xFF; // MSB of register address
+	cmd_buf[2] = addr & 0xFF; // LSB of register address
+	cmd_buf[3] = 0x00; // Dummy byte
+
+	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 4 + len,
+			100, 0);
+
+	if (ret != SX1262_OK)
+		return ret;
+
+	memcpy(data, &res_buf[4], len);
+
+	return SX1262_OK;
+}
+
 /* ===== Public function definitions ================================ */
 
 /**
@@ -203,31 +272,23 @@ static sx1262_status_t sx1262_send_command(sx1262_t *dev, uint8_t *cmd, uint8_t 
  * @return SX1262_OK if device responds correctly
  */
 sx1262_status_t sx1262_get_lora_sync_word(sx1262_t *dev, uint16_t *sync_word) {
-
-	if(!dev || !sync_word) {
+	if (!dev || !sync_word) {
 		return SX1262_INVALID_PARAM;
 	}
 
-	if(dev->initialized != SX1262_BOOL_TRUE) {
+	if (dev->initialized != SX1262_BOOL_TRUE) {
 		return SX1262_ERR_NOT_INITIALIZED;
 	}
 
+	uint8_t res[2];
 
-	uint8_t cmd_buf[6] = { 0 };
-	uint8_t res_buf[6] = { 0 };
+	sx1262_status_t ret = sx1262_read_register(dev,
+	SX126X_REG_LORA_SYNC_WORD_MSB, res, sizeof(uint16_t));
 
-	cmd_buf[0] = SX126X_CMD_READ_REGISTER;
-	cmd_buf[1] = (SX126X_REG_LORA_SYNC_WORD_MSB >> 8) & 0xFF; // MSB of register address
-	cmd_buf[2] = SX126X_REG_LORA_SYNC_WORD_MSB & 0xFF; // LSB of register address
-	cmd_buf[3] = 0x00; // Dummy byte
-
-	/* We expect 2 bytes response for sync word (MSB and LSB) */
-	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 6, 100, 0);
+	*sync_word = ((uint16_t) res[0] << 8) | res[1];
 
 	if (ret != SX1262_OK)
 		return ret;
-
-	*sync_word = ((uint16_t)res_buf[4] << 8) | res_buf[5];
 
 	return SX1262_OK;
 }
@@ -279,7 +340,7 @@ sx1262_status_t sx1262_init(sx1262_t *dev, const sx1262_hal_t *hal) {
 
 	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 4, 100, 0);
 
-	if (ret != SX1262_OK){
+	if (ret != SX1262_OK) {
 		dev->initialized = SX1262_BOOL_FALSE;
 		return ret;
 	}
@@ -288,79 +349,6 @@ sx1262_status_t sx1262_init(sx1262_t *dev, const sx1262_hal_t *hal) {
 	dev->in_receive_mode = SX1262_BOOL_FALSE;
 	return SX1262_OK;
 }
-
-///**
-// * @brief Set device to sleep mode
-// * @param[in] dev Pointer to device handle
-// * @return SX1262_OK on success | error code
-// */
-//
-//sx1262_status_t sx1262_set_mode_sleep(sx1262_t *dev, bool warm_start,
-//bool wake_on_rtc) {
-//	if (dev->initialized != SX1262_INITIALIZED) {
-//		return SX1262_ERR_NOT_INITIALIZED;
-//	}
-//
-//	sx1262_status_t ret;
-//	chip_mode_t mode;
-//	sx1262_get_chip_status(dev, &mode, NULL);
-//
-//	if (mode != CHIP_MODE_STDBY_RC && chip_mode != CHIP_MODE_STDBY_XOSC) {
-//		ret = sx1262_set_mode_standby(dev);
-//		if (ret != SX1262_OK) {
-//			return SX1262_ERROR;
-//		}
-//		dev->hal.delay_ms(10);
-//	}
-//
-//	uint8_t cmd_buf[2] = { 0 };
-//	uint8_t res_buf[2] = { 0 };
-//
-//	// Build sleepConfig byte
-//	uint8_t sleep_config = 0x00;
-//
-//	// Bit 2: Warm/Cold start
-//	if (warm_start) {
-//		sleep_config |= (1 << 2); //warm start
-//	} else {
-//		sleep_config &= ~(1 << 2); // Cold start (default)
-//	}
-//
-//	// Bit 1: RFU (Reserved For Future Use) - always 0
-//
-//	sleep_config &= ~(1 << 1);
-//
-//	// Bit 0: RTC timeout enable
-//
-//	if (wake_on_rtc) {
-//		sleep_config |= (1 << 0); //Wake on RTC timeout
-//	} else {
-//		sleep_config &= ~(1 << 0); // Wake only on NSS
-//	}
-//
-//	//Bits 7:3: Reserved - always 0
-//	sleep_config &= 0x07;
-//
-//	cmd_buf[0] = SX126X_CMD_SET_SLEEP;
-//	cmd_buf[1] = sleep_config;
-//
-//	ret = sx1262_send_command(dev, cmd_buf, res_buf, 2, 100, 500);
-//
-//	if (ret == SX1262_OK) {
-//		dev->in_receive_mode = false;
-//		dev->mode = CHIP_MODE_SLEEP;
-//
-//		// According to datasheet: device will be unresponsive for ~500µs
-//		// We'll wait a bit more for safety
-//		dev->hal.delay_ms(1);
-//
-//		// Note: After this point, the device will only respond to:
-//		// 1. Falling edge on NSS (wakes device)
-//		// 2. RTC timeout (if enabled)
-//	}
-//
-//	return ret;
-//}
 
 /**
  * @brief Set device to standby mode
@@ -768,7 +756,7 @@ sx1262_status_t sx1262_set_pa_config(sx1262_t *dev, uint8_t duty_cycle,
 }
 
 sx1262_status_t sx1262_calibrate_image(sx1262_t *dev, uint32_t freq_hz) {
-	if(dev->initialized != SX1262_BOOL_TRUE) {
+	if (dev->initialized != SX1262_BOOL_TRUE) {
 		return SX1262_ERR_NOT_INITIALIZED;
 	}
 	uint8_t freq1, freq2;
@@ -963,70 +951,34 @@ sx1262_status_t sx1262_handle_rx_done(sx1262_t *dev, uint8_t *buf, uint8_t *len)
 		return SX1262_ERR_NOT_INITIALIZED;
 	}
 
-	uint8_t cmd_buf[4] = { 0 };
-	uint8_t res_buf[4] = { 0 };
 	sx1262_status_t ret;
+	uint8_t payload_len = 0;
+	uint8_t start_addr = 0;
 
-	// Get RX buffer status
-	cmd_buf[0] = SX126X_CMD_GET_RX_BUFFER_STATUS;
-	cmd_buf[1] = 0xFF;
-	cmd_buf[2] = 0xFF;
-	cmd_buf[3] = 0xFF;
+	ret = sx1262_get_rx_buffer_status(dev, &payload_len, &start_addr);
 
-	ret = sx1262_send_command(dev, cmd_buf, res_buf, 4, 100, 0);
-	if (ret != SX1262_OK)
+	if(ret != SX1262_OK)
 		return ret;
 
-	uint8_t payload_len = res_buf[2];    // Payload length
-	uint8_t start_addr = res_buf[3];     // Start address
-
-	if (payload_len == 0) {
+	if(payload_len == 0) {
 		*len = 0;
 		return SX1262_OK;
 	}
 
-	cmd_buf[0] = SX126X_CMD_READ_BUFFER;
-	cmd_buf[1] = start_addr;
-	cmd_buf[2] = 0x00; // Dummy
+	ret = sx1262_read_buffer(dev, 0x00, buf, *len);
 
-	// We'll use a single buffer for the whole transaction
-	uint8_t spi_tx_buf[3 + 256] = { 0 };
-	uint8_t spi_rx_buf[3 + 256] = { 0 };
+	if(ret != SX1262_OK)
+		return ret;
 
-	spi_tx_buf[0] = SX126X_CMD_READ_BUFFER;
-	spi_tx_buf[1] = start_addr;
-	spi_tx_buf[2] = 0x00;
+	*len = payload_len;
 
-	for (int i = 3; i < 3 + payload_len; i++) {
-		spi_tx_buf[i] = 0x00;
-	}
+	memcpy(dev->rx_buffer, buf, payload_len);
 
-	sx1262_busy_wait(dev, 100);
-	sx1262_cs_low(dev);
-
-	dev->hal.spi_transmit_receive(spi_tx_buf, spi_rx_buf, 3 + payload_len, 100);
-
-	sx1262_cs_high(dev);
-	sx1262_busy_wait(dev, 100);
-
-	// Parse response: spi_rx_buf[0]=status, [1]=dummy, [2...]=data
-	// Skip first 2 bytes (status + dummy)
-	if (buf && len) {
-		memcpy(buf, &spi_rx_buf[3], payload_len);
-		*len = payload_len;
-
-		// Also store in device
-		memcpy(dev->rx_buffer, &spi_rx_buf[3], payload_len);
-//		dev->rx_buffer_length = payload_len;
-
-		//Call Callback if set
-		if (dev->callbacks.rx_done) {
-			dev->callbacks.rx_done(buf, payload_len);
-		}
+	if(dev->callbacks.rx_done != NULL) {
+		dev->callbacks.rx_done(buf, payload_len);
 	}
 
 	return SX1262_OK;
-
 }
 
 sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len,
@@ -1082,6 +1034,127 @@ sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len,
 	return SX1262_OK;
 }
 
+sx1262_status_t sx1262_write_buffer(sx1262_t *dev, uint8_t offset,
+		const uint8_t *data, uint8_t len) {
+	if (dev == NULL || data == NULL || len == 0) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	if (len > SX126X_MAX_PACKET_LENGTH) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	sx1262_status_t ret;
+
+	uint8_t cmd_buf[2 + SX126X_MAX_PACKET_LENGTH] = { 0 };
+	uint8_t res_buf[2 + SX126X_MAX_PACKET_LENGTH] = { 0 };
+	uint16_t tx_len;
+
+	cmd_buf[0] = SX126X_CMD_WRITE_BUFFER;
+	cmd_buf[1] = offset;
+
+	memcpy(&cmd_buf[2], data, len);
+
+	tx_len = 2 + len;
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, tx_len, 100, 0);
+
+	return ret;
+}
+
+sx1262_status_t sx1262_get_rx_buffer_status(sx1262_t *dev, uint8_t *payload_len,
+		uint8_t *start_addr) {
+
+	if (dev == NULL || payload_len == NULL || start_addr == NULL) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	uint8_t cmd_buf[4] = { 0 };
+	uint8_t res_buf[4] = { 0 };
+	sx1262_status_t ret;
+
+	cmd_buf[0] = SX126X_CMD_GET_RX_BUFFER_STATUS;
+	cmd_buf[1] = 0xFF;
+	cmd_buf[2] = 0xFF;
+	cmd_buf[3] = 0xFF;
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, sizeof(cmd_buf), 100, 0);
+	if (ret != SX1262_OK)
+		return ret;
+
+	*payload_len = res_buf[2];    // Payload length
+	*start_addr = res_buf[3];     // Start address
+
+	return SX1262_OK;
+
+}
+
+sx1262_status_t sx1262_read_buffer(sx1262_t *dev, uint8_t offset, uint8_t *data,
+		uint8_t len) {
+	uint8_t cmd_buf[3 + SX126X_MAX_PACKET_LENGTH] = { 0 };
+	uint8_t res_buf[3 + SX126X_MAX_PACKET_LENGTH] = { 0 };
+	sx1262_status_t ret;
+
+	if(dev == NULL || data == NULL || len == 0) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if(len > SX126X_MAX_PACKET_LENGTH) {
+		return SX1262_INVALID_PARAM;
+	}
+
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	cmd_buf[0] = SX126X_CMD_READ_BUFFER;
+	cmd_buf[1] = offset;
+	cmd_buf[2] = 0x00; // Dummy byte
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, 3 + len, 100, 0);
+
+	if(ret != SX1262_OK) {
+		return ret;
+	}
+
+	memcpy(data, &res_buf[3], len);
+
+	return SX1262_OK;
+}
+
+sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi){
+	if (dev->initialized != SX1262_BOOL_TRUE) {
+		return SX1262_ERR_NOT_INITIALIZED;
+	}
+
+	uint8_t cmd_buf[3] = { 0 };
+	uint8_t res_buf[3] = { 0 };
+
+	sx1262_status_t ret;
+
+	cmd_buf[0] = SX126X_CMD_GET_RSSI_INST;
+	cmd_buf[1] = 0x00; //Dummy byte
+	cmd_buf[2] = 0x00; //Dummy byte
+
+	ret = sx1262_send_command(dev, cmd_buf, res_buf, 3, 100, 0);
+
+	if (ret != SX1262_OK) {
+		return ret;
+	}
+
+	*rssi = (int8_t) res_buf[2];
+
+	return SX1262_OK;
+}
+
 /**
  * @brief Set the LoRa sync word
  * @param[in] dev Pointer to device handle
@@ -1093,16 +1166,13 @@ sx1262_status_t sx1262_set_lora_sync_word(sx1262_t *dev, uint16_t sync_word) {
 		return SX1262_ERR_NOT_INITIALIZED;
 	}
 
-	uint8_t cmd_buf[5] = { 0 };
-	uint8_t res_buf[5] = { 0 };
+	uint8_t data[2];
 
-	cmd_buf[0] = SX126X_CMD_WRITE_REGISTER;
-	cmd_buf[1] = (SX126X_REG_LORA_SYNC_WORD_MSB >> 8) & 0xFF; // MSB of address
-	cmd_buf[2] = SX126X_REG_LORA_SYNC_WORD_MSB & 0xFF;        // LSB of address
-	cmd_buf[3] = (sync_word >> 8) & 0xFF;                     // Sync word MSB
-	cmd_buf[4] = sync_word & 0xFF;                            // Sync word LSB
+	data[0] = (sync_word >> 8) & 0xFF; // MSB
+	data[1] = sync_word & 0xFF;        // LSB
 
-	sx1262_status_t ret = sx1262_send_command(dev, cmd_buf, res_buf, 5, 100, 0);
+	sx1262_status_t ret = sx1262_write_register(dev,
+	SX126X_REG_LORA_SYNC_WORD_MSB, data, sizeof(sync_word));
 
 	return ret;
 }
@@ -1128,17 +1198,7 @@ sx1262_status_t sx1262_lora_transmit_it(sx1262_t *dev, uint8_t *data,
 		return SX1262_INVALID_PARAM;
 	}
 
-	// Set TX base address to 0x00
-	cmd_buf[0] = SX126X_CMD_WRITE_BUFFER;
-	cmd_buf[1] = 0x00; // Start address
-
-	ret = sx1262_send_command(dev, cmd_buf, res_buf, 2, 100, 0);
-
-	if (ret != SX1262_OK) {
-		return ret;
-	}
-
-	ret = sx1262_send_command(dev, data, res_buf, length + 1, 100, 0);
+	ret = sx1262_write_buffer(dev, 0x00, data, length);
 
 	if (ret != SX1262_OK) {
 		return ret;

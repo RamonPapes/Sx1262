@@ -293,6 +293,22 @@ sx1262_status_t sx1262_lora_transmit_it(sx1262_t *dev, uint8_t *data, uint8_t le
  */
 sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len, uint32_t timeout);
 
+sx1262_status_t sx1262_write_buffer(sx1262_t *dev, uint8_t offset, const uint8_t *data, uint8_t len);
+
+sx1262_status_t sx1262_get_rx_buffer_status(sx1262_t *dev, uint8_t *payload_length, uint8_t *rx_start_buffer_pointer);
+
+sx1262_status_t sx1262_read_buffer(sx1262_t *dev, uint8_t offset, uint8_t *data, uint8_t len);
+
+//TODO: TESTING
+sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi);
+
+
+sx1262_status_t sx1262_set_tx();
+
+sx1262_status_t sx1262_set_rx();
+
+;
+
 /**
  * @brief Set TX done callback function
  * @param[in] dev Device handle
