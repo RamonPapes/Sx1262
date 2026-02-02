@@ -103,6 +103,17 @@ typedef enum {
 	SX1262_LORA_BANDWIDTH_500_KHZ = 0x06, /**< 500 kHz */
 } sx1262_lora_bandwidth_t;
 
+typedef enum {
+	SX126X_DIO3_OUTPUT_1_6 = 0x00, /**< 1.6 V */
+	SX126X_DIO3_OUTPUT_1_7 = 0x01, /**< 1.7 V */
+	SX126X_DIO3_OUTPUT_1_8 = 0x02, /**< 1.8 V */
+	SX126X_DIO3_OUTPUT_2_2 = 0x03, /**< 2.2 V */
+	SX126X_DIO3_OUTPUT_2_4 = 0x04, /**< 2.4 V */
+	SX126X_DIO3_OUTPUT_2_7 = 0x05, /**< 2.7 V */
+	SX126X_DIO3_OUTPUT_3_0 = 0x06, /**< 3.0 V */
+	SX126X_DIO3_OUTPUT_3_3 = 0x07, /**< 3.3 V */
+} sx1262_dio3_output_t;
+
 /**
  * @brief sx1262 lora coding rate enumeration definition
  */
@@ -170,14 +181,31 @@ typedef enum {
 } sx1262_irq_t;
 
 /**
+ * @brief SX1262 TX done callback type
+ */
+typedef void (*sx1262_rx_done_cb_t)(uint8_t *data, uint8_t length);
+
+/**
+ * @brief SX1262 RX error callback type
+ */
+typedef void (*sx1262_rx_error_cb_t)(sx1262_status_t error);
+
+/**
+ * @brief SX1262 timeout callback type
+ */
+typedef void (*sx1262_timeout_cb_t)(void);
+
+typedef void (*sx1262_tx_done_cb_t)(void);
+
+/**
  * @brief SX1262 callback functions structure
  *
  */
 typedef struct sx1262_callbacks {
-	void (*tx_done)(void);
-	void (*rx_done)(uint8_t *data, uint8_t length);
-	void (*rx_error)(sx1262_status_t error);
-	void (*timeout)(void);
+	sx1262_rx_done_cb_t rx_done;
+	sx1262_rx_error_cb_t rx_error;
+	sx1262_timeout_cb_t timeout;
+	sx1262_tx_done_cb_t tx_done;
 } sx1262_callbacks_t;
 
 /**

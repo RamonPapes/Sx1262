@@ -23,6 +23,13 @@ extern "C" {
  */
 
 /**
+ * @brief Reset sx1262 device
+ * @param[in] dev pointer to an sx1262 handle structure
+ * @note    none
+ */
+sx1262_status_t sx1262_reset(sx1262_t *dev);
+
+/**
  * @brief sx1262 init function
  * @param[in] dev pointer to an sx1262 handle structure
  * @param[in] hal pointer to an sx1262 hal structure
@@ -34,8 +41,11 @@ sx1262_status_t sx1262_init(sx1262_t *dev, const sx1262_hal_t *hal);
 /**
  * @brief Set device to sleep mode
  * @param[in] dev Pointer to device handle
+ * @param[in] output DIO3 output voltage
  * @return SX1262_OK on success | error code
  */
+
+sx1262_status_t sx1262_set_dio3_as_tcxo_ctrl(sx1262_t *dev,sx1262_dio3_output_t output);
 
 //sx1262_status_t sx1262_set_mode_sleep(sx1262_t *dev);
 
@@ -54,6 +64,28 @@ sx1262_status_t sx1262_set_mode_standby(sx1262_t *dev);
 sx1262_status_t sx1262_set_mode_continuous_receive(sx1262_t *dev);
 
 /**
+ * @brief Set device to TX mode
+ * @param[in] dev Device handle
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_tx(sx1262_t *dev);
+
+/**
+ * @brief Set device to RX mode
+ * @param[in] dev Device handle
+ * @return SX1262_OK on success | error code
+ */
+sx1262_status_t sx1262_set_rx(sx1262_t *dev);
+
+/**
+ * @brief Set RX/TX fallback mode
+ * @param[in] dev Device handle
+ * @param[in] mode Fallback mode
+ */
+sx1262_status_t sx1262_set_fallback_mode(sx1262_t *dev,
+		sx1262_rx_tx_fallback_mode_t mode);
+
+/**
  * @brief Set sync word
  * @param[in] dev Pointer to device handle
  * @param[in] sync_word Sync word to set
@@ -68,16 +100,6 @@ sx1262_status_t sx1262_get_lora_sync_word(sx1262_t *dev, uint16_t *sync_word);
  * @return SX1262_OK on success | error code
  */
 sx1262_status_t sx1262_set_lora_sync_word(sx1262_t *dev, uint16_t sync_word);
-
-/**
- * @brief Get chip status
- * @param[in] dev Pointer to device handle
- * @param[out] mode Pointer to chip mode variable
- * @param[out] cmd_status Pointer to command status variable
- * @return chip status
- */
-sx1262_status_t sx1262_get_chip_status(sx1262_t *dev, chip_mode_t *mode,
-		command_status_t *cmd_status);
 
 /**
  * @brief Set packet type
@@ -95,6 +117,16 @@ sx1262_status_t sx1262_set_packet_type(sx1262_t *dev, packet_type_t pkt_type);
  * @return SX1262_OK on success | error code
  */
 sx1262_status_t sx1262_get_packet_type(sx1262_t *dev, packet_type_t *pkt_type);
+
+/**
+ * @brief Get chip status
+ * @param[in] dev Pointer to device handle
+ * @param[out] mode Pointer to chip mode variable
+ * @param[out] cmd_status Pointer to command status variable
+ * @return chip status
+ */
+sx1262_status_t sx1262_get_chip_status(sx1262_t *dev, chip_mode_t *mode,
+		command_status_t *cmd_status);
 
 /**
  * @brief Set RF frequency
@@ -197,14 +229,6 @@ sx1262_status_t sx1262_set_tx_params(sx1262_t *dev, int8_t power,
 		sx1262_ramp_time_t rampTime);
 
 /**
- * @brief Set RX/TX fallback mode
- * @param[in] dev Device handle
- * @param[in] mode Fallback mode
- */
-sx1262_status_t SX1262_set_fallback_mode(sx1262_t *dev,
-		sx1262_rx_tx_fallback_mode_t mode);
-
-/**
  * @brief Set LoRa symbol timeout
  * @param[in] dev Device handle
  * @param[in] symb_num Number of symbols for timeout
@@ -262,14 +286,14 @@ sx1262_status_t sx1262_handle_rx_done(sx1262_t *dev, uint8_t *buf, uint8_t *len)
  * @param[in] status Status of the transmission
  * @return SX1262_OK on success
  */
-sx1262_status_t sx1262_handle_tx_done(sx1262_t *dev, sx1262_status_t status);
+sx1262_status_t sx1262_handle_tx_done(sx1262_t *dev);
 
 //TODO: TESTING
 /**
- * @brief Transmit data
+ * @brief Transmit data in LoRa mode (interrupt-based)
  * @param[in] dev Device handle
- * @param[in] data Data buffer to transmit
- * @param[in] length Length of data to transmit
+ * @param[in] data Data to transmit
+ * @param[in] length Length of data
  * @return SX1262_OK on success
  */
 sx1262_status_t sx1262_lora_transmit(sx1262_t *dev, uint8_t *data, uint8_t length, uint32_t timeout_ms);
@@ -293,55 +317,71 @@ sx1262_status_t sx1262_lora_transmit_it(sx1262_t *dev, uint8_t *data, uint8_t le
  */
 sx1262_status_t sx1262_lora_receive(sx1262_t *dev, uint8_t *buf, uint8_t *len, uint32_t timeout);
 
+/**
+ * @brief Write data to buffer
+ * @param[in] dev Device handle
+ * @param[in] offset Offset in buffer to start writing
+ * @param[in] data Data to write
+ * @param[in] len Length of data to write
+ * @return SX1262_OK on success | error code
+ */
 sx1262_status_t sx1262_write_buffer(sx1262_t *dev, uint8_t offset, const uint8_t *data, uint8_t len);
 
+/**
+ * @brief Get RX buffer status
+ * @param[in] dev Device handle
+ * @param[out] payload_len Pointer to payload length variable
+ * @param[out] start_addr Pointer to start address variable
+ * @return SX1262_OK on success | error code
+ */
 sx1262_status_t sx1262_get_rx_buffer_status(sx1262_t *dev, uint8_t *payload_length, uint8_t *rx_start_buffer_pointer);
 
+/**
+ * @brief Read data from buffer
+ * @param[in] dev Device handle
+ * @param[in] offset Offset in buffer to start reading
+ * @param[out] data Buffer to store read data
+ * @param[in] len Length of data to read
+ * @return SX1262_OK on success | error code
+ */
 sx1262_status_t sx1262_read_buffer(sx1262_t *dev, uint8_t offset, uint8_t *data, uint8_t len);
 
 //TODO: TESTING
-sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi);
-
 /**
- * @brief Set device to TX mode
+ * @brief Get RSSI instantaneous value
  * @param[in] dev Device handle
+ * @param[out] rssi Pointer to RSSI variable
  * @return SX1262_OK on success | error code
  */
-sx1262_status_t sx1262_set_tx(sx1262_t *dev);
-
-sx1262_status_t sx1262_set_rx(sx1262_t *dev, uint32_t timeout);
-
-;
+sx1262_status_t sx1262_get_rssi_inst(sx1262_t *dev, int8_t *rssi);
 
 /**
  * @brief Set TX done callback function
  * @param[in] dev Device handle
  * @param[in] callback Pointer to TX done callback function
  */
-void sx1262_set_tx_done_callback(sx1262_t *dev, void (*callback)(void));
+void sx1262_set_tx_done_callback(sx1262_t *dev, sx1262_tx_done_cb_t callback);
 
 /**
  * @brief Set RX done callback function
  * @param[in] dev Device handle
  * @param[in] callback Pointer to RX done callback function
  */
-void sx1262_set_rx_done_callback(sx1262_t *dev,
-		void (*callback)(uint8_t *data, uint8_t length));
+void sx1262_set_rx_done_callback(sx1262_t *dev, sx1262_rx_done_cb_t callback);
 
 /**
  * @brief Set RX error callback function
  * @param[in] dev Device handle
  * @param[in] callback Pointer to RX error callback function
  */
-void sx1262_set_rx_error_callback(sx1262_t *dev,
-		void (*callback)(sx1262_status_t error));
+void sx1262_set_rx_error_callback(sx1262_t *dev, sx1262_rx_error_cb_t callback);
 
 /**
  * @brief Set timeout callback function
  * @param[in] dev Device handle
  * @param[in] callback Pointer to timeout callback function
  */
-void sx1262_set_timeout_callback(sx1262_t *dev, void (*callback)(void));
+void sx1262_set_timeout_callback(sx1262_t *dev, sx1262_timeout_cb_t callback);
 
 /**
  * @}
